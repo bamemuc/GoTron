@@ -1,0 +1,11 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.server
+    container_name: gotron-server
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../../configs/server.env.example
+
