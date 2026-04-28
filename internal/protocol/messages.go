@@ -20,6 +20,10 @@ type JoinPayload struct {
 	Color    string `json:"color"`
 }
 
+type JoinedPayload struct {
+	Id int `json:"id"`
+}
+
 type InputPayload struct {
 	Direction string `json:"direction"`
 }
@@ -31,7 +35,12 @@ type PlayerState struct {
 }
 
 type StatePayload struct {
-	Players [2]PlayerState `json:"players"`ok,
+	Players [2]PlayerState `json:"players"`
 	Status  string         `json:"status"`
 	Tick    int            `json:"tick"`
+}
+
+type MatchEndedPayload struct {
+	Draw     bool `json:"draw"`
+	WinnerID int  `json:"winnderID"`
 }
