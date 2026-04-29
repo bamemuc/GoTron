@@ -1,6 +1,5 @@
 package protocol
 
-// TODO: JSON-Nachrichten (join, input, state_snapshot, match_end) definieren.
 import (
 	"encoding/json"
 )
@@ -40,7 +39,7 @@ type StatePayload struct {
 	Tick    int            `json:"tick"`
 }
 
-type MatchEndedPayload struct {
+type EndPayload struct {
 	Draw     bool `json:"draw"`
 	WinnerID int  `json:"winnderID"`
 }

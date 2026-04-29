@@ -62,6 +62,10 @@ Environment variables (see `configs/server.env.example`):
 
 The Go client stub in `cmd/client/` is **not used**. The frontend is a browser-based client (HTML + JS + Canvas) served as static files from the Go server under `/`. See `docs/LERNPLAN.md` Schritt 9.
 
+## Session continuity
+
+`docs/SESSION.md` tracks where the last session left off — what was decided, what files are in what state, and what's next. Read it at the start of every new conversation to get up to speed quickly.
+
 ## MVP boundaries
 
 No matchmaking, reconnect, persistence, or accounts before the MVP is complete. One match, one server instance, two players.

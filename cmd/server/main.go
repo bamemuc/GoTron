@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gotron/internal/server"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +14,8 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	// TODO: /ws WebSocket Handler hier verdrahten.
+	mux.HandleFunc("/ws", server.WsHandler)
+
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
