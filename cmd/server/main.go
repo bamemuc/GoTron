@@ -14,7 +14,10 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	mux.HandleFunc("/ws", server.WsHandler)
+	room := server.NewRoom()
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		server.WsHandler(w, r, room)
+	})
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {

@@ -41,5 +41,5 @@ type StatePayload struct {
 
 type EndPayload struct {
 	Draw     bool `json:"draw"`
-	WinnerID int  `json:"winnderID"`
+	WinnerID int  `json:"winnerID"`
 }
