@@ -1,6 +1,5 @@
 package game
 
-// TODO: Kollisionen mit Wand und Trails pruefen.
 func checkCollision(state State, pId int) bool {
 	var p = state.Players[pId]
 	var e = state.Players[1-pId]

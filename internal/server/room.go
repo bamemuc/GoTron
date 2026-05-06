@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// TODO: Eine laufende Match-Instanz mit 2 Spielern verwalten.
 type Room struct {
 	mu     sync.Mutex
 	inputs chan<- game.PlayerInput
@@ -26,18 +25,18 @@ func (r *Room) Start(ws0 *websocket.Conn, ws1 *websocket.Conn) {
 
 	var pos0 = game.Position{
 		X: 1500,
-		Y: 10,
+		Y: 500,
 	}
 	var pos1 = game.Position{
 		X: 1500,
-		Y: 2990,
+		Y: 2500,
 	}
 
 	var p0 = game.Player{
 		Position:    pos0,
 		TrailRender: nil,
 		TrailMap:    make(map[game.Position]bool),
-		Direction:   0,
+		Direction:   game.Down,
 		Alive:       true,
 		Id:          0,
 	}
@@ -46,7 +45,7 @@ func (r *Room) Start(ws0 *websocket.Conn, ws1 *websocket.Conn) {
 		Position:    pos1,
 		TrailRender: nil,
 		TrailMap:    make(map[game.Position]bool),
-		Direction:   1,
+		Direction:   game.Up,
 		Alive:       true,
 		Id:          1,
 	}
@@ -66,7 +65,6 @@ func (r *Room) Start(ws0 *websocket.Conn, ws1 *websocket.Conn) {
 	go func() {
 		r.loser = game.Run(&state, 25, inputs, states)
 		close(states)
-		close(r.done)
 	}()
 	go r.inputReader(ws0, 0, inputs)
 	go r.inputReader(ws1, 1, inputs)
@@ -106,6 +104,7 @@ func (r *Room) inputReader(conn *websocket.Conn, playerId int, inputs chan<- gam
 }
 
 func (r *Room) outputWriter() {
+	defer close(r.done)
 	for state := range r.states {
 		statePayload, err := json.Marshal(r.toStatePayload(state))
 		if err != nil {
@@ -153,9 +152,28 @@ func (r *Room) Join(conn *websocket.Conn) {
 	defer r.mu.Unlock()
 	if r.ws[0] == nil {
 		r.ws[0] = conn
+		sendJoined(conn, 0)
 	} else if r.ws[1] == nil {
 		r.ws[1] = conn
+		sendJoined(conn, 1)
 		r.Start(r.ws[0], r.ws[1])
+	}
+}
+
+func sendJoined(conn *websocket.Conn, id int) {
+	payload, err := json.Marshal(protocol.JoinedPayload{Id: id})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	msg := protocol.Message{Type: "joined", Payload: payload}
+	msgJson, err := json.Marshal(msg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if err := conn.WriteMessage(websocket.TextMessage, msgJson); err != nil {
+		log.Println(err)
 	}
 }
 
@@ -240,6 +258,15 @@ func (r *Room) sendMatchEnd(loser int) {
 	err = r.ws[1].WriteMessage(websocket.TextMessage, msgJson)
 	if err != nil {
 		return
+	}
+}
+
+func (r *Room) IsDone() bool {
+	select {
+	case <-r.done:
+		return true
+	default:
+		return false
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func main() {
@@ -14,10 +15,21 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	room := server.NewRoom()
+	var (
+		roomMu      sync.Mutex
+		currentRoom = server.NewRoom()
+	)
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		roomMu.Lock()
+		if currentRoom.IsDone() {
+			currentRoom = server.NewRoom()
+		}
+		room := currentRoom
+		roomMu.Unlock()
 		server.WsHandler(w, r, room)
 	})
+
+	mux.Handle("/", http.FileServer(http.Dir("web")))
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {

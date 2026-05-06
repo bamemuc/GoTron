@@ -1,6 +1,5 @@
 package server
 
-// TODO: WebSocket-Verbindungen annehmen und Read/Write-Loops starten.
 import (
 	"encoding/json"
 	"gotron/internal/protocol"
