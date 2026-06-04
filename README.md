@@ -47,33 +47,48 @@ Two players connect via browser, control their light cycles, and the last one al
 
 ---
 
-## How to run
+## How to play
+
+### Same network (local)
 
 **Requirements:** Go 1.22+
 
 ```bash
-# Start the server
 go run ./cmd/server
-
-# Open in browser
-http://localhost:8080
 ```
 
-Open two browser tabs — player 1 gets cyan, player 2 gets magenta. Game starts automatically when both are connected.
+Open `http://localhost:8080` in two browser tabs. Game starts when both players are connected.
 
 **Controls:** Arrow keys or WASD
 
 ---
 
-## Play online
+### With friends online
 
-To play across different networks, run a Cloudflare Tunnel alongside the server:
+**Requirements:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
+**1. Start the server**
 ```bash
-cloudflared tunnel --url http://localhost:8080
+docker run -p 8080:8080 bastiangrut/gotron:latest
 ```
 
-Share the printed URL with your opponent — no port forwarding or cloud server needed.
+**2. Get your public URL** (in a second terminal)
+```bash
+docker logs $(docker ps -q --filter ancestor=bastiangrut/gotron:latest) 2>&1 | grep "trycloudflare"
+```
+You'll see something like:
+```
+https://something-random.trycloudflare.com
+```
+
+**3. Share the URL** with your opponent — both open it in a browser and the game starts automatically.
+
+**4. Stop when done**
+```bash
+docker stop $(docker ps -q --filter ancestor=bastiangrut/gotron:latest)
+```
+
+> The URL changes every time you restart — share a fresh one each session.
 
 ---
 
