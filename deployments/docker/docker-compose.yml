@@ -1,17 +1,8 @@
 services:
-  server:
+  gotron:
     build:
       context: ../..
       dockerfile: deployments/docker/Dockerfile.server
-    container_name: gotron-server
+    container_name: gotron
     ports:
       - "8080:8080"
-    env_file:
-      - ../../configs/server.env.example
-
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: gotron-tunnel
-    command: tunnel --url http://server:8080
-    depends_on:
-      - server

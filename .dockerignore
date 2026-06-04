@@ -6,4 +6,5 @@ bin/
 docs/
 test/
 deployments/
+!deployments/docker/start.sh
 configs/

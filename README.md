@@ -91,20 +91,20 @@ web/          — browser client (HTML + Canvas + JS)
 
 ---
 
-## Play with friends via Docker
+## Play with friends
 
-The easiest way to play with someone on a different network. Docker bundles the server and automatically creates a public Cloudflare Tunnel URL.
+The server and Cloudflare Tunnel are bundled into one Docker container. No Go, no extra tools needed — just Docker.
 
 **Requirements:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-**1. Start everything**
+**1. Start**
 ```bash
 docker compose -f deployments/docker/docker-compose.yml up --build
 ```
 
 **2. Get the public URL**
 ```bash
-docker compose -f deployments/docker/docker-compose.yml logs tunnel
+docker logs gotron 2>&1 | grep "trycloudflare"
 ```
 Look for a line like:
 ```
