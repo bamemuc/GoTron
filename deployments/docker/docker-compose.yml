@@ -9,3 +9,9 @@ services:
     env_file:
       - ../../configs/server.env.example
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: gotron-tunnel
+    command: tunnel --url http://server:8080
+    depends_on:
+      - server

@@ -91,14 +91,33 @@ web/          — browser client (HTML + Canvas + JS)
 
 ---
 
-## Docker — WIP
+## Play with friends via Docker
 
-Container setup is in progress. The goal is to run the server in Docker so it can be deployed to any VPS without installing Go.
+The easiest way to play with someone on a different network. Docker bundles the server and automatically creates a public Cloudflare Tunnel URL.
 
+**Requirements:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+**1. Start everything**
 ```bash
-# Not ready yet
-docker compose -f deployments/docker/docker-compose.yml up --build server
+docker compose -f deployments/docker/docker-compose.yml up --build
 ```
+
+**2. Get the public URL**
+```bash
+docker compose -f deployments/docker/docker-compose.yml logs tunnel
+```
+Look for a line like:
+```
+https://something-random.trycloudflare.com
+```
+Share that URL with your opponent — both open it in a browser and the game starts.
+
+**3. Stop**
+```bash
+docker compose -f deployments/docker/docker-compose.yml down
+```
+
+> The URL changes every time you restart, so share a fresh one each session.
 
 ---
 
@@ -110,4 +129,4 @@ docker compose -f deployments/docker/docker-compose.yml up --build server
 | WebSockets | gorilla/websocket |
 | Client | HTML + Canvas + vanilla JS |
 | Tunneling | Cloudflare Tunnel |
-| Containerization | Docker *(WIP)* |
+| Containerization | Docker + Docker Compose |
