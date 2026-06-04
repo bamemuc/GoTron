@@ -1,8 +1,6 @@
 services:
   gotron:
-    build:
-      context: ../..
-      dockerfile: deployments/docker/Dockerfile.server
+    image: bastiangrut/gotron:latest
     container_name: gotron
     ports:
       - "8080:8080"

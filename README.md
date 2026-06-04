@@ -99,12 +99,12 @@ The server and Cloudflare Tunnel are bundled into one Docker container. No Go, n
 
 **1. Start**
 ```bash
-docker compose -f deployments/docker/docker-compose.yml up --build
+docker run -p 8080:8080 bastiangrut/gotron:latest
 ```
 
 **2. Get the public URL**
 ```bash
-docker logs gotron 2>&1 | grep "trycloudflare"
+docker logs $(docker ps -q --filter ancestor=bastiangrut/gotron:latest) 2>&1 | grep "trycloudflare"
 ```
 Look for a line like:
 ```
@@ -114,7 +114,7 @@ Share that URL with your opponent — both open it in a browser and the game sta
 
 **3. Stop**
 ```bash
-docker compose -f deployments/docker/docker-compose.yml down
+docker stop $(docker ps -q --filter ancestor=bastiangrut/gotron:latest)
 ```
 
 > The URL changes every time you restart, so share a fresh one each session.
