@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GoTron</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #05060a; color: #cde; font-family: ui-monospace, monospace; overflow: hidden; }
+  #game { display: block; margin: 0 auto; background: #05060a; }
+  #status { position: fixed; top: 8px; left: 12px; font-size: 14px; opacity: 0.85; }
+  #overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.6); font-size: 32px; letter-spacing: 2px;
+  }
+  #overlay.show { display: flex; }
+  #overlay div { text-align: center; }
+  #overlay small { display: block; font-size: 14px; margin-top: 12px; opacity: 0.7; }
+  #play-again { margin-top: 20px; padding: 10px 28px; font-size: 16px; font-family: inherit; background: #22e0ff; color: #05060a; border: none; cursor: pointer; letter-spacing: 1px; }
+  #play-again:hover { background: #fff; }
+</style>
+</head>
+<body>
+<canvas id="game" width="800" height="800"></canvas>
+<div id="status">Connecting...</div>
+<div id="overlay">
+  <div>
+    <div id="overlay-text"></div>
+    <small id="overlay-sub"></small>
+    <br>
+    <button id="play-again" onclick="reconnect()">Play again</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ---------- constants (must match server) ----------
+const WORLD_W = 3000;
+const WORLD_H = 3000;
+const VIEW_W  = 800;
+const VIEW_H  = 800;
+const ZOOM    = 0.4;        // 1 world unit = 0.4 screen pixels
+const TRAIL_W = 12;         // trail thickness in world units
+const HEAD_R  = 18;         // head triangle "radius" in world units
+const COLORS  = ["#22e0ff", "#ff3df0"]; // p0 cyan, p1 magenta
+
+// ---------- DOM ----------
+const canvas  = document.getElementById("game");
+const ctx     = canvas.getContext("2d");
+const status  = document.getElementById("status");
+const overlay = document.getElementById("overlay");
+const overlayText = document.getElementById("overlay-text");
+
+// ---------- state ----------
+let myId = null;
+let latestState = null;
+let prevPositions = [null, null];
+let inferredDir = ["down", "up"];
+let lastSentDir = null;
+let cam = { x: WORLD_W / 2, y: WORLD_H / 2 };
+let ws = null;
+
+// ---------- WebSocket ----------
+const wsProto = location.protocol === "https:" ? "wss" : "ws";
+
+function connect() {
+  myId = null;
+  latestState = null;
+  prevPositions = [null, null];
+  inferredDir = ["down", "up"];
+  lastSentDir = null;
+
+  ws = new WebSocket(`${wsProto}://${location.host}/ws`);
+
+  ws.onopen = () => {
+    status.textContent = "Joining...";
+    ws.send(JSON.stringify({ type: "join", payload: { username: "player", color: "#22e0ff" } }));
+  };
+
+  ws.onclose = () => { status.textContent = "Disconnected."; };
+  ws.onerror = () => { status.textContent = "Connection error."; };
+
+  ws.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    switch (msg.type) {
+      case "joined":
+        myId = msg.payload.id;
+        lastSentDir = myId === 0 ? "down" : "up";
+        status.textContent = `You are player ${myId}. Waiting for opponent...`;
+        const spawn = myId === 0 ? { x: 1500, y: 500 } : { x: 1500, y: 2500 };
+        cam.x = spawn.x; cam.y = spawn.y;
+        break;
+      case "state":
+        latestState = msg.payload;
+        status.textContent = `Tick ${latestState.tick}`;
+        updateInferredDirections();
+        break;
+      case "end":
+        showEnd(msg.payload);
+        break;
+    }
+  };
+}
+
+function reconnect() {
+  overlay.classList.remove("show");
+  connect();
+}
+
+connect();
+
+// ---------- input ----------
+const KEY_TO_DIR = {
+  ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+  w: "up", s: "down", a: "left", d: "right",
+  W: "up", S: "down", A: "left", D: "right",
+};
+const OPPOSITE = { up: "down", down: "up", left: "right", right: "left" };
+
+window.addEventListener("keydown", (e) => {
+  const dir = KEY_TO_DIR[e.key];
+  if (!dir) return;
+  if (myId === null) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // don't allow reversing into yourself
+  if (lastSentDir && OPPOSITE[lastSentDir] === dir) return;
+  if (lastSentDir === dir) return;
+  lastSentDir = dir;
+  ws.send(JSON.stringify({ type: "input", payload: { direction: dir } }));
+  e.preventDefault();
+});
+
+// ---------- direction inference ----------
+function updateInferredDirections() {
+  if (!latestState) return;
+  for (let i = 0; i < 2; i++) {
+    const p = latestState.players[i].position;
+    const prev = prevPositions[i];
+    if (prev) {
+      const dx = p.x - prev.x, dy = p.y - prev.y;
+      if (dx > 0) inferredDir[i] = "right";
+      else if (dx < 0) inferredDir[i] = "left";
+      else if (dy > 0) inferredDir[i] = "down";
+      else if (dy < 0) inferredDir[i] = "up";
+    }
+    prevPositions[i] = { x: p.x, y: p.y };
+  }
+}
+
+// ---------- end overlay ----------
+function showEnd(payload) {
+  let text;
+  if (payload.draw) {
+    text = "Draw.";
+  } else if (payload.winnerID === myId) {
+    text = "You win!";
+  } else {
+    text = "You lose.";
+  }
+  overlayText.textContent = text;
+  document.getElementById("overlay-sub").textContent = "Both players must click Play again.";
+  overlay.classList.add("show");
+}
+
+// ---------- rendering ----------
+function dirToAngle(dir) {
+  switch (dir) {
+    case "up":    return -Math.PI / 2;
+    case "down":  return  Math.PI / 2;
+    case "left":  return  Math.PI;
+    case "right": return  0;
+    default:      return 0;
+  }
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function render() {
+  ctx.fillStyle = "#05060a";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+  if (latestState && myId !== null) {
+    // smooth camera toward player
+    const target = latestState.players[myId].position;
+    cam.x = lerp(cam.x, target.x, 0.2);
+    cam.y = lerp(cam.y, target.y, 0.2);
+
+    ctx.save();
+    ctx.translate(VIEW_W / 2, VIEW_H / 2);
+    ctx.scale(ZOOM, ZOOM);
+    ctx.translate(-cam.x, -cam.y);
+
+    drawGrid();
+    drawBorder();
+    drawPlayer(0);
+    drawPlayer(1);
+
+    ctx.restore();
+  }
+
+  requestAnimationFrame(render);
+}
+
+function drawGrid() {
+  ctx.strokeStyle = "#0e1320";
+  ctx.lineWidth = 1 / ZOOM;
+  const step = 200;
+  ctx.beginPath();
+  for (let x = 0; x <= WORLD_W; x += step) {
+    ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_H);
+  }
+  for (let y = 0; y <= WORLD_H; y += step) {
+    ctx.moveTo(0, y); ctx.lineTo(WORLD_W, y);
+  }
+  ctx.stroke();
+}
+
+function drawBorder() {
+  ctx.strokeStyle = "#ff4d4d";
+  ctx.lineWidth = 14;
+  ctx.shadowColor = "#ff4d4d";
+  ctx.shadowBlur = 20;
+  ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+  ctx.shadowBlur = 0;
+}
+
+function drawPlayer(i) {
+  const p = latestState.players[i];
+  const color = COLORS[i];
+
+  // trail
+  if (p.trail && p.trail.length > 0) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = TRAIL_W;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(p.trail[0].x, p.trail[0].y);
+    for (let k = 1; k < p.trail.length; k++) {
+      ctx.lineTo(p.trail[k].x, p.trail[k].y);
+    }
+    ctx.lineTo(p.position.x, p.position.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // head as triangle pointing in direction
+  const angle = dirToAngle(inferredDir[i]);
+  ctx.save();
+  ctx.translate(p.position.x, p.position.y);
+  ctx.rotate(angle);
+  ctx.fillStyle = p.alive ? "#ffffff" : "#555";
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(HEAD_R, 0);
+  ctx.lineTo(-HEAD_R * 0.7,  HEAD_R * 0.8);
+  ctx.lineTo(-HEAD_R * 0.7, -HEAD_R * 0.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

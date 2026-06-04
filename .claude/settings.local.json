@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(winget install *)",
+      "Bash(npm --version)",
+      "Bash(go test *)",
+      "Bash(go build *)",
+      "Bash(go mod *)",
+      "Bash(go run *)",
+      "Bash(curl *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8080)",
+      "Bash(taskkill *)",
+      "PowerShell(Stop-Process *)"
+    ]
+  }
+}
